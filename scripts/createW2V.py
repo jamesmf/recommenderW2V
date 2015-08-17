@@ -13,7 +13,7 @@ from os import listdir
 
 
 def getRandom(user,words,numLines,numWords,outfile):
-    numLines    = max(numLines,len(words)/10)
+    numLines    = min(max(numLines,len(words)/10),400)
     print user, numLines
     for x in range(numLines):
         shuffle(words)
@@ -28,7 +28,10 @@ def main():
     folder      = "../data/processed/"
     x           = [folder+a for a in listdir(folder)]
     user        = [u[u.rfind("/")+1:u.rfind(".")] for u in x]
-        
+    
+    print x.index(folder+"user_15788.txt")
+    stop=raw_input("stop")
+    
     for fileName in x:
         with open(fileName,'rb') as f:
             user    = fileName[fileName.rfind("/")+1:]

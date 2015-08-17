@@ -9,7 +9,7 @@ import cPickle
 """Returns the word2vec vectors as a dictionary of "term": np.array()"""
 def loadThemVectors():
     outMat  = {}
-    with open("../data/out/vectors.txt",'rb') as f:
+    with open("../data/vectors.txt",'rb') as f:
         for line in f.readlines():
             sp  = line.split()
             name= sp[0].strip()            
@@ -51,8 +51,8 @@ def ratingsToData(ratings,vectors,userInfo,movieAvg):
     X   = []
     y   = []
     for line in ratings:
-        r   = [0,0,0,0,0]
-        sp  = line.split("\t")
+        #r   = [0,0,0,0,0]
+        sp  = line.split("::")
         if len(sp) > 1:
             user= sp[0]
             mv  = sp[1]
@@ -60,18 +60,38 @@ def ratingsToData(ratings,vectors,userInfo,movieAvg):
             userword    = "user_"+user.strip()+".txt"
             likeword    = "like_"+mv
             dislword    = "dislike_"+mv
-            uservec     = vectors[userword]
-            likevec     = vectors[likeword]
-            disvec      = vectors[dislword]
+
+            if vectors.has_key(userword):
+                uservec     = vectors[userword]
+            else:
+                uservec     = np.zeros(20)
+            if vectors.has_key(likeword):
+                likevec     = vectors[likeword]
+            else:
+                likevec     = np.zeros(20)
+            if vectors.has_key(dislword):
+                disvec      = vectors[dislword]
+            else:
+                disvec      = np.zeros(20)
+                
             avgRating   = userInfo[user][0]
             numRated    = userInfo[user][0]
             movieMean   = movieAvg[mv][0]
             movieStd    = movieAvg[mv][1]
-            example     = np.append(movieMean,movieStd,numRated,avgRating,uservec,likevec,disvec)
+
+                
+            example     = np.append(movieMean,movieStd)
+            example     = np.append(example,numRated)
+            example     = np.append(example,avgRating)
+            example     = np.append(example,uservec)
+            example     = np.append(example,likevec)
+            example     = np.append(example,disvec)
+
             X.append(example)
-            print example
-            r[]
-            
+            #print example, len(example)
+            #stop = raw_input("stop")
+            y.append(rtg)
+    return X, y
 
 def main():
     np.random.seed(1000)
@@ -89,7 +109,7 @@ def main():
     userInfo    = getUserInfo()
     movieAvg    = getMovieAvg()
     X,y         = ratingsToData(trainRatings,vectors,userInfo,movieAvg)
-    testX,testy = ratingsToData(testRating,vectors,userInfo,movieAvg)
+    testX,testy = ratingsToData(testRatings,vectors,userInfo,movieAvg)
     
     size        = len(X[0])
     
@@ -144,12 +164,14 @@ def main():
     model.add(Activation('tanh'))
     
     model.compile(loss='mean_square_error', optimizer='rmsprop')
-    model.fit(train, Y, nb_epoch=nb_epoch, batch_size=batch_size, validation_split=0.20)
-    preds = model.predict(test,batch_size=batch_size)
+    model.fit(X, y, nb_epoch=nb_epoch, batch_size=batch_size, validation_split=0.20)
+    preds = model.predict(testX,batch_size=batch_size)
     
-    pred_arr = []
-    for pred in preds:
-        pred_arr.append(pred[0])
+    #pred_arr = []
+    for i in range(0,preds):
+        print preds[i], testy[i]
     
     ### Output Results ###
 
+if __name__ == "__main__":
+    main()

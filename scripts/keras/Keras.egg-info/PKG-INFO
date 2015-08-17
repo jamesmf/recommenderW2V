@@ -1,0 +1,10 @@
+Metadata-Version: 1.0
+Name: Keras
+Version: 0.0.1
+Summary: Theano-based Deep Learning
+Home-page: https://github.com/fchollet/keras
+Author: Francois Chollet
+Author-email: francois.chollet@gmail.com
+License: MIT
+Description: UNKNOWN
+Platform: UNKNOWN

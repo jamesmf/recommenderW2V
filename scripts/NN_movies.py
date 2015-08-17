@@ -47,9 +47,13 @@ def getMovieAvg():
         
 """takes the ratings lines and the w2v vectors and produces for each line
 one example to be fed to a neural net"""
-def ratingsToData(ratings,vectors,userInfo,movieAvg):
+def ratingsToData(ratings,vectors,userInfo,movieAvg,subset,AVG_RATING_VAL,AVG_STD_VAL):
     X   = []
     y   = []
+    rLen    =  len(ratings)
+    count   = 0
+    if not (subset == -1):
+        ratings = ratings[subset[0]:subset[1]]
     for line in ratings:
         #r   = [0,0,0,0,0]
         sp  = line.split("::")
@@ -74,11 +78,21 @@ def ratingsToData(ratings,vectors,userInfo,movieAvg):
             else:
                 disvec      = np.zeros(20)
                 
-            avgRating   = userInfo[user][0]
-            numRated    = userInfo[user][0]
-            movieMean   = movieAvg[mv][0]
-            movieStd    = movieAvg[mv][1]
+            if userInfo.has_key(user):
+                avgRating   = userInfo[user][0]
+                numRated    = userInfo[user][0]
+            else:
+                print "NO USER"
+                avgRating   = AVG_RATING_VAL
+                numRated    = AVG_STD_VAL
 
+            if movieAvg.has_key(mv):
+                movieMean   = movieAvg[mv][0]
+                movieStd    = movieAvg[mv][1]
+            else:
+                print "NO MOVIE!!!"
+                movieMean   = AVG_RATING_VAL
+                movieStd    = AVG_STD_VAL
                 
             example     = np.append(movieMean,movieStd)
             example     = np.append(example,numRated)
@@ -91,16 +105,29 @@ def ratingsToData(ratings,vectors,userInfo,movieAvg):
             #print example, len(example)
             #stop = raw_input("stop")
             y.append(rtg)
-    return X, y
+            count += 1
+            if (count%100) == 0:
+                print count, rLen
+    return np.array(X), np.array(y)
+    
+    
+def getTrainBatch(ratings,vectors,userInfo,movieAvg,batchSize):
+    pos     = int(np.floor(np.random.rand()*(len(ratings) - batchSize)))
+    subset  = (pos, pos+batchSize)
+    Xbatch, ybatch  = ratingsToData(ratings,vectors,userInfo,movieAvg,subset)
+    return Xbatch, ybatch
 
 def main():
     np.random.seed(1000)
     
+    AVG_RATING_VAL  = 3.19
+    AVG_STD_VAL     = 0.93
+    
     #####
     data_folder = "../data/"
-    out_folder = "../data/out/"
-    batch_size = 4
-    nb_epoch = 10
+    out_folder  = "../data/out/"
+    batchSize   = 32
+    numberEpochs= 100000
     
     ### load train and test ###
     testRatings = getTestSet("../data/raw/test/ra.test")
@@ -108,10 +135,12 @@ def main():
     vectors     = loadThemVectors()
     userInfo    = getUserInfo()
     movieAvg    = getMovieAvg()
-    X,y         = ratingsToData(trainRatings,vectors,userInfo,movieAvg)
-    testX,testy = ratingsToData(testRatings,vectors,userInfo,movieAvg)
     
-    size        = len(X[0])
+    X,y = ratingsToData(testRatings,vectors,userInfo,movieAvg,-1,AVG_RATING_VAL,AVG_STD_VAL)
+    
+    firstBatchX, firstBatchy   = getTrainBatch(trainRatings,vectors,userInfo,movieAvg,batchSize)
+    size        = len(firstBatchX[0])
+    print size
     
     
     #train  = pd.read_csv(data_folder+'train.csv', index_col=0)
@@ -160,17 +189,27 @@ def main():
     model.add(Activation('relu'))
     model.add(Dropout(0.5))    
     
-    model.add(Dense(512, 1))
+    model.add(Dense(100, 1))
     model.add(Activation('tanh'))
     
-    model.compile(loss='mean_square_error', optimizer='rmsprop')
-    model.fit(X, y, nb_epoch=nb_epoch, batch_size=batch_size, validation_split=0.20)
-    preds = model.predict(testX,batch_size=batch_size)
+    model.compile(loss='mean_squared_error', optimizer='rmsprop')
+    
+    for i in range(0,numberEpochs):
+        batchX,batchy   = getTrainBatch(trainRatings,vectors,userInfo,movieAvg,batchSize)
+        loss            = model.train(batchX, batchy)
+        if (i%1000) == 0:
+            print i, str(i)+"/"+str(numberEpochs)
+    
+    #reset X and y as the test set - memory saving
+    X,y = ratingsToData(testRatings,vectors,userInfo,movieAvg,-1)
+    preds = model.predict(X,batch_size=batchSize)
     
     #pred_arr = []
-    for i in range(0,preds):
-        print preds[i], testy[i]
+    with open("../data/out/predictions.csv",'wb') as f:
     
+        for i in range(0,preds):
+            print preds[i], y[i]
+            f.write(str(preds[i])+"\t"+str(y[i])+"\n")
     ### Output Results ###
 
 if __name__ == "__main__":

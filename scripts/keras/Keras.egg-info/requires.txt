@@ -1,0 +1,2 @@
+theano
+h5py

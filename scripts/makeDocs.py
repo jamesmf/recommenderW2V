@@ -20,8 +20,8 @@ import numpy as np
 import cPickle
 
 def main():
-    userStuff()
-    STD_SCALAR  = 10                                    #This is the number of times to write a like/dislike word in a user's document PER STANDARD DEV above/below mean
+    STD_SCALAR  = 10
+    userStuff()                                    #This is the number of times to write a like/dislike word in a user's document PER STANDARD DEV above/below mean
     ratings     = getRatings()                          #This is the mean and stdev rating of each movie
     makeDocuments("../data/raw/",ratings,STD_SCALAR)    #Writes a document for each user
 
@@ -63,7 +63,7 @@ def makeDocuments(inFolder,ratings,STD_SCALAR):
 """either creates rating dictionary or reads it from a flat txt file"""            
 def getRatings():
     if not isfile("../data/out/avgRatings.txt"):
-        with open("../data/raw/train/ra.train",'rb') as f:
+        with open("../data/raw/train/TrainMe.txt",'rb') as f:
             avgRatings  = ratingsAvg(f.read())
         with open("../data/out/avgRatings.txt",'wb') as f2:
             for movie in avgRatings:        
@@ -99,7 +99,7 @@ def ratingsAvg(data):
 
 """gets the number of ratings given and the average rating for each user"""
 def userStuff():
-    with open("../data/raw/train/ra.train",'rb') as f1:
+    with open("../data/raw/train/TrainMe.txt",'rb') as f1:
         data    = f1.read()
     userStats   = {}
     dsp         = data.split("\n")

@@ -6,6 +6,13 @@ import numpy as np
 from sklearn import preprocessing
 import cPickle
 
+"""DEFINE SOME CONSTANTS"""
+AVG_NUM_RATED   = 20
+AVG_RATING_VAL  = 3.19
+AVG_STD_VAL     = 0.93
+VECTOR_LENGTH = 25
+
+
 """Returns the word2vec vectors as a dictionary of "term": np.array()"""
 def loadThemVectors():
     outMat  = {}
@@ -47,7 +54,8 @@ def getMovieAvg():
         
 """takes the ratings lines and the w2v vectors and produces for each line
 one example to be fed to a neural net"""
-def ratingsToData(ratings,vectors,userInfo,movieAvg,subset,AVG_RATING_VAL,AVG_STD_VAL):
+def ratingsToData(ratings,vectors,userInfo,movieAvg,subset,AVG_RATING_VAL=3.19,AVG_STD_VAL=0.93,AVG_NUM_RATED=20):
+    global VECTOR_LENGTH
     X   = []
     y   = []
     rLen    =  len(ratings)
@@ -60,7 +68,7 @@ def ratingsToData(ratings,vectors,userInfo,movieAvg,subset,AVG_RATING_VAL,AVG_ST
         if len(sp) > 1:
             user= sp[0]
             mv  = sp[1]
-            rtg = sp[2]
+            rtg = float(sp[2])
             userword    = "user_"+user.strip()+".txt"
             likeword    = "like_"+mv
             dislword    = "dislike_"+mv
@@ -68,15 +76,17 @@ def ratingsToData(ratings,vectors,userInfo,movieAvg,subset,AVG_RATING_VAL,AVG_ST
             if vectors.has_key(userword):
                 uservec     = vectors[userword]
             else:
-                uservec     = np.zeros(20)
+                uservec     = np.zeros(VECTOR_LENGTH)
+                
             if vectors.has_key(likeword):
                 likevec     = vectors[likeword]
             else:
-                likevec     = np.zeros(20)
+                likevec     = np.zeros(VECTOR_LENGTH)
+
             if vectors.has_key(dislword):
                 disvec      = vectors[dislword]
             else:
-                disvec      = np.zeros(20)
+                disvec      = np.zeros(VECTOR_LENGTH)
                 
             if userInfo.has_key(user):
                 avgRating   = userInfo[user][0]
@@ -84,14 +94,14 @@ def ratingsToData(ratings,vectors,userInfo,movieAvg,subset,AVG_RATING_VAL,AVG_ST
             else:
                 print "NO USER"
                 avgRating   = AVG_RATING_VAL
-                numRated    = AVG_STD_VAL
+                numRated    = AVG_NUM_RATED
 
             if movieAvg.has_key(mv):
                 movieMean   = movieAvg[mv][0]
                 movieStd    = movieAvg[mv][1]
             else:
                 print "NO MOVIE!!!"
-                movieMean   = AVG_RATING_VAL
+                movieMean   = avgRating
                 movieStd    = AVG_STD_VAL
                 
             example     = np.append(movieMean,movieStd)
@@ -106,22 +116,26 @@ def ratingsToData(ratings,vectors,userInfo,movieAvg,subset,AVG_RATING_VAL,AVG_ST
             #stop = raw_input("stop")
             y.append(rtg)
             count += 1
-            if (count%100) == 0:
+            if (count%1000) == 0:
                 print count, rLen
     return np.array(X), np.array(y)
     
     
 def getTrainBatch(ratings,vectors,userInfo,movieAvg,batchSize):
-    pos     = int(np.floor(np.random.rand()*(len(ratings) - batchSize)))
-    subset  = (pos, pos+batchSize)
+    ind     = int(np.floor(np.random.rand()*(len(ratings) - batchSize)))
+    subset  = (ind, ind+batchSize)
     Xbatch, ybatch  = ratingsToData(ratings,vectors,userInfo,movieAvg,subset)
-    return Xbatch, ybatch
+    return np.array(Xbatch), np.array(ybatch)
+
+def getTestBatch(ratings,vectors,userInfo,movieAvg,batchSize,block):
+    ind     = block*batchSize
+    subset  = (ind, ind+batchSize)
+    Xbatch, ybatch  = ratingsToData(ratings,vectors,userInfo,movieAvg,subset)
+    return np.array(Xbatch), np.array(ybatch)
 
 def main():
     np.random.seed(1000)
-    
-    AVG_RATING_VAL  = 3.19
-    AVG_STD_VAL     = 0.93
+
     
     #####
     data_folder = "../data/"
@@ -129,88 +143,72 @@ def main():
     batchSize   = 32
     numberEpochs= 100000
     
-    ### load train and test ###
-    testRatings = getTestSet("../data/raw/test/ra.test")
-    trainRatings= getTrainSet("../data/raw/train/ra.train")
+    ### load training data and other relevant data ###
+    trainRatings= getTrainSet("../data/raw/train/TrainMe.txt")
     vectors     = loadThemVectors()
     userInfo    = getUserInfo()
     movieAvg    = getMovieAvg()
     
-    X,y = ratingsToData(testRatings,vectors,userInfo,movieAvg,-1,AVG_RATING_VAL,AVG_STD_VAL)
-    
     firstBatchX, firstBatchy   = getTrainBatch(trainRatings,vectors,userInfo,movieAvg,batchSize)
     size        = len(firstBatchX[0])
+    del firstBatchX, firstBatchy
+    
     print size
-    
-    
-    #train  = pd.read_csv(data_folder+'train.csv', index_col=0)
-    #test  = pd.read_csv(data_folder+'test.csv', index_col=0)
     print "Data Read complete"
-#    
-#    Y = train.Survived
-#    train.drop('Survived', axis=1, inplace=True)
-#    
-#    columns = train.columns
-#    test_ind = test.index
-#    
-#    train['Age'] = train['Age'].fillna(train['Age'].mean())
-#    test['Age'] = test['Age'].fillna(test['Age'].mean())
-#    train['Fare'] = train['Fare'].fillna(train['Fare'].mean())
-#    test['Fare'] = test['Fare'].fillna(test['Fare'].mean())
-#    
-#    category_index = [0,1,2,4,5,6,8,9]
-#    for i in category_index:
-#        print str(i)+" : "+columns[i]
-#        train[columns[i]] = train[columns[i]].fillna('missing')
-#        test[columns[i]] = test[columns[i]].fillna('missing')
-#    
-#    train = np.array(train)
-#    test = np.array(test)
-       
-    ### label encode the categorical variables ###
-#    for i in category_index:
-#        print str(i)+" : "+str(columns[i])
-#        lbl = preprocessing.LabelEncoder()
-#        lbl.fit(list(train[:,i]) + list(test[:,i]))
-#        train[:,i] = lbl.transform(train[:,i])
-#        test[:,i] = lbl.transform(test[:,i])
-    
-    ### making data as numpy float ###
-#    train = train.astype(np.float32)
-#    test = test.astype(np.float32)
-    #Y = np.array(Y).astype(np.int32)
-    
+   
+    """define the Neural Net"""
     model = Sequential()
     model.add(Dense(size, 512))
     model.add(Activation('relu'))
-    model.add(Dropout(0.5))
+    #model.add(Dropout(0.5))
+    
+    model.add(Dense(512, 512))
+    model.add(Activation('relu'))
+    model.add(Dropout(0.5))  
 
     model.add(Dense(512, 100))
     model.add(Activation('relu'))
     model.add(Dropout(0.5))    
     
     model.add(Dense(100, 1))
-    model.add(Activation('tanh'))
+    #model.add(Activation('tanh'))
     
     model.compile(loss='mean_squared_error', optimizer='rmsprop')
     
+    
+    """Load the test data"""
+
     for i in range(0,numberEpochs):
         batchX,batchy   = getTrainBatch(trainRatings,vectors,userInfo,movieAvg,batchSize)
         loss            = model.train(batchX, batchy)
         if (i%1000) == 0:
-            print i, str(i)+"/"+str(numberEpochs)
+            print str(i)+"/"+str(numberEpochs)
     
-    #reset X and y as the test set - memory saving
-    X,y = ratingsToData(testRatings,vectors,userInfo,movieAvg,-1)
-    preds = model.predict(X,batch_size=batchSize)
+    del trainRatings #we've finished training, now we load the test set
     
-    #pred_arr = []
-    with open("../data/out/predictions.csv",'wb') as f:
-    
-        for i in range(0,preds):
-            print preds[i], y[i]
-            f.write(str(preds[i])+"\t"+str(y[i])+"\n")
-    ### Output Results ###
+    """define X and y as the test set"""
+    testRatings = getTestSet("../data/raw/test/TestMe.txt")
+    meanError   = 0
+    sqError     = 0
+    batchSize   = 10000    
+    """test the model in batches"""
 
+    for i in range(0,np.ceil(len(testRatings)*1./batchSize)):    
+        batchX,batchy   = getTestBatch(testRatings,vectors,userInfo,movieAvg,batchSize,i)
+        preds   = model.predict(batchX,batch_size=batchSize)
+    
+        ### Write out results ###
+        with open("../data/out/predictions.csv",'a') as f:
+            for i in range(0,len(preds)):
+                #print preds[i], batchy[i]
+                sqError   += np.float(preds[i]-batchy[i])**2
+                f.write(str(preds[i])+"\t"+str(batchy[i])+"\n")
+    
+    meanError   = sqError/len(testRatings)
+    RMSE        = np.sqrt(meanError)
+    print RMSE
+    with open("../data/out/predictions.csv",'a') as f:
+        f.write(str(RMSE))
+        
 if __name__ == "__main__":
     main()

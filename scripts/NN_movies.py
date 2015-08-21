@@ -141,7 +141,7 @@ def main():
     data_folder = "../data/"
     out_folder  = "../data/out/"
     batchSize   = 32
-    numberEpochs= 100000
+    numberEpochs= 150000
     
     ### load training data and other relevant data ###
     trainRatings= getTrainSet("../data/raw/train/TrainMe.txt")
@@ -161,6 +161,10 @@ def main():
     model.add(Dense(size, 512))
     model.add(Activation('relu'))
     #model.add(Dropout(0.5))
+    
+    model.add(Dense(512, 512))
+    model.add(Activation('relu'))
+    model.add(Dropout(0.5))  
     
     model.add(Dense(512, 512))
     model.add(Activation('relu'))

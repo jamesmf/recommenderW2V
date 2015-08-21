@@ -1,7 +1,7 @@
 # recommenderW2V
 embedding users and items in the same space using a Word2Vec model 
 
-First attempt (no parameter tweaking) RMSE on MovieLens10M: 0.83
+First attempt (no parameter tweaking) RMSE on MovieLens10M: 0.82965120956
 
 The pipeline is:
   

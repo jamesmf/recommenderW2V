@@ -52,12 +52,12 @@ def writeDoc(fields,ratings,STD_SCALAR):
 def makeDocuments(inFolder,ratings,STD_SCALAR):
 
     files   = listdir(inFolder+"train/")
-    count   = 0
-    for fi in files:
 
+    for fi in files:
+        count = 0
         with open(inFolder+"train/"+fi,'rb') as lines:
             for line in lines:
-                count+=1
+                count   +=1
                 if (count%1000) == 0:
                     print count
                 fields  = line.split("::")
@@ -111,9 +111,6 @@ def userStuff():
         userStats   = {}
         count   = 0
         for rating in f1:
-            count+=1
-            if (count% 10) == 0:
-                print count
             tsp = rating.split("::")
             if len(tsp) > 1:
                 if userStats.has_key(tsp[0]):

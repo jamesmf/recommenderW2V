@@ -59,7 +59,6 @@ def ratingsToData(ratings,vectors,userInfo,movieAvg,subset,AVG_RATING_VAL=3.19,A
     X   = []
     y   = []
     rLen    =  len(ratings)
-    count   = 0
     if not (subset == -1):
         ratings = ratings[subset[0]:subset[1]]
     for line in ratings:
@@ -89,37 +88,41 @@ def ratingsToData(ratings,vectors,userInfo,movieAvg,subset,AVG_RATING_VAL=3.19,A
                 disvec      = np.zeros(VECTOR_LENGTH)
                 
             if userInfo.has_key(user):
-                avgRating   = userInfo[user][0]
-                numRated    = userInfo[user][0]
+                avgRating   = float(userInfo[user].split("\t")[0])
+                numRated    = float(userInfo[user].split("\t")[1])
             else:
                 print "NO USER"
                 avgRating   = AVG_RATING_VAL
                 numRated    = AVG_NUM_RATED
 
             if movieAvg.has_key(mv):
-                movieMean   = movieAvg[mv][0]
-                movieStd    = movieAvg[mv][1]
+                movieMean   = float(movieAvg[mv][0])
+                movieStd    = float(movieAvg[mv][1])
             else:
                 print "NO MOVIE!!!"
                 movieMean   = avgRating
                 movieStd    = AVG_STD_VAL
                 
             example     = np.append(movieMean,movieStd)
-            example     = np.append(example,numRated)
+            #example     = np.append(example,numRated)
             example     = np.append(example,avgRating)
             example     = np.append(example,uservec)
             example     = np.append(example,likevec)
             example     = np.append(example,disvec)
 
+
             X.append(example)
             #print example, len(example)
             #stop = raw_input("stop")
             y.append(rtg)
-            count += 1
-            if (count%1000) == 0:
-                print count, rLen
+
     return np.array(X), np.array(y)
     
+def getTrainSeq(ratings,vectors,userInfo,movieAvg,batchSize,block):
+    ind     = block*batchSize
+    subset  = (ind, ind+batchSize)
+    Xbatch, ybatch  = ratingsToData(ratings,vectors,userInfo,movieAvg,subset)
+    return np.array(Xbatch), np.array(ybatch)
     
 def getTrainBatch(ratings,vectors,userInfo,movieAvg,batchSize):
     ind     = int(np.floor(np.random.rand()*(len(ratings) - batchSize)))
@@ -180,13 +183,18 @@ def main():
     model.compile(loss='mean_squared_error', optimizer='rmsprop')
     
     
-    """Load the test data"""
-
-    for i in range(0,numberEpochs):
-        batchX,batchy   = getTrainBatch(trainRatings,vectors,userInfo,movieAvg,batchSize)
-        loss            = model.train(batchX, batchy)
-        if (i%1000) == 0:
+    """Get batches of data and train on them"""
+    for i in range(0,int(np.ceil(len(trainRatings)*1./batchSize))):
+        batchX,batchy   = getTestBatch(trainRatings,vectors,userInfo,movieAvg,batchSize,i)
+        loss            = model.train(batchX,batchy)
+        if (i%10000) == 0:
             print str(i)+"/"+str(numberEpochs)
+
+#    for i in range(0,numberEpochs):
+#        batchX,batchy   = getTrainBatch(trainRatings,vectors,userInfo,movieAvg,batchSize)
+#        loss            = model.train(batchX, batchy)
+#        if (i%1000) == 0:
+#            print str(i)+"/"+str(numberEpochs)
     
     del trainRatings #we've finished training, now we load the test set
     
@@ -197,7 +205,7 @@ def main():
     batchSize   = 10000    
     """test the model in batches"""
 
-    for i in range(0,np.ceil(len(testRatings)*1./batchSize)):    
+    for i in range(0,int(np.ceil(len(testRatings)*1./batchSize))):    
         batchX,batchy   = getTestBatch(testRatings,vectors,userInfo,movieAvg,batchSize,i)
         preds   = model.predict(batchX,batch_size=batchSize)
     

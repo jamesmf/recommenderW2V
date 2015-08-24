@@ -21,8 +21,11 @@ import cPickle
 
 def main():
     STD_SCALAR  = 10
-    userStuff()                                    #This is the number of times to write a like/dislike word in a user's document PER STANDARD DEV above/below mean
-    ratings     = getRatings()                          #This is the mean and stdev rating of each movie
+    "begin"
+    userStuff()     
+    print "done with userStuff"                            
+    ratings     = getRatings() 
+    print "done with averages"                         
     makeDocuments("../data/raw/",ratings,STD_SCALAR)    #Writes a document for each user
 
 
@@ -49,22 +52,26 @@ def writeDoc(fields,ratings,STD_SCALAR):
 def makeDocuments(inFolder,ratings,STD_SCALAR):
 
     files   = listdir(inFolder+"train/")
+    count   = 0
     for fi in files:
-        with open(inFolder+"train/"+fi,'rb') as f:
-            lines   = f.read().split("\n")
-        for line in lines:
-            fields  = line.split("::")
-            if len(fields) > 1:
-                with open(inFolder+"../processed/user_"+fields[0]+".txt",'a') as f2:
-                    out = writeDoc(fields,ratings,STD_SCALAR)
-                    for i in range(0,out[1]):
-                        f2.write(out[0])   
+
+        with open(inFolder+"train/"+fi,'rb') as lines:
+            for line in lines:
+                count+=1
+                if (count%1000) == 0:
+                    print count
+                fields  = line.split("::")
+                if len(fields) > 1:
+                    with open(inFolder+"../processed/user_"+fields[0]+".txt",'a') as f2:
+                        out = writeDoc(fields,ratings,STD_SCALAR)
+                        for i in range(0,out[1]):
+                            f2.write(out[0])   
 
 """either creates rating dictionary or reads it from a flat txt file"""            
 def getRatings():
     if not isfile("../data/out/avgRatings.txt"):
         with open("../data/raw/train/TrainMe.txt",'rb') as f:
-            avgRatings  = ratingsAvg(f.read())
+            avgRatings  = ratingsAvg(f)
         with open("../data/out/avgRatings.txt",'wb') as f2:
             for movie in avgRatings:        
                 f2.write(str(movie)+"\t"+str(avgRatings[movie])+"\n")
@@ -83,8 +90,8 @@ returns a dict of "movie": "[mean,stdev]"
 """
 def ratingsAvg(data):
     movies  = {}
-    dsp = data.split("\n")
-    for rating in dsp:
+    #dsp = data.split("\n")
+    for rating in data:
         tsp = rating.split("::")
         if len(tsp) > 1:
             if movies.has_key(tsp[1]):
@@ -100,23 +107,26 @@ def ratingsAvg(data):
 """gets the number of ratings given and the average rating for each user"""
 def userStuff():
     with open("../data/raw/train/TrainMe.txt",'rb') as f1:
-        data    = f1.read()
-    userStats   = {}
-    dsp         = data.split("\n")
-    for rating in dsp:
-        tsp = rating.split("::")
-        if len(tsp) > 1:
-            if userStats.has_key(tsp[0]):
-                userStats[tsp[0]].append(float(tsp[2]))
-            else:
-                userStats[tsp[0]]  = [float(tsp[2])]
-    out ={}            
-    for k,v in userStats.iteritems():
-        out[k]  = str(np.mean(v))+"\t"+str(len(v))
         
-    with open("../data/out/users.pickle",'wb') as f:
-        cp = cPickle.Pickler(f)
-        cp.dump(out)
+        userStats   = {}
+        count   = 0
+        for rating in f1:
+            count+=1
+            if (count% 10) == 0:
+                print count
+            tsp = rating.split("::")
+            if len(tsp) > 1:
+                if userStats.has_key(tsp[0]):
+                    userStats[tsp[0]].append(float(tsp[2]))
+                else:
+                    userStats[tsp[0]]  = [float(tsp[2])]
+        out ={}            
+        for k,v in userStats.iteritems():
+            out[k]  = str(np.mean(v))+"\t"+str(len(v))
+            
+        with open("../data/out/users.pickle",'wb') as f:
+            cp = cPickle.Pickler(f)
+            cp.dump(out)
     
 if __name__ == "__main__":
     main()

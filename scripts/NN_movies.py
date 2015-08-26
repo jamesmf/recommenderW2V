@@ -135,6 +135,22 @@ def getTestBatch(ratings,vectors,userInfo,movieAvg,batchSize,block):
     subset  = (ind, ind+batchSize)
     Xbatch, ybatch  = ratingsToData(ratings,vectors,userInfo,movieAvg,subset)
     return np.array(Xbatch), np.array(ybatch)
+    
+def makeModel(numNeurons,descriptions):
+    model   = Sequential()
+    for layerNum in range(1,len(numNeurons)):
+        prevLayerSize   = numNeurons[layerNum-1]
+        layerSize       = numNeurons[layerNum]
+        model.add(Dense(prevLayerSize,layerSize))        
+        
+        if descriptions[layerNum].find("relu") > -1:
+            model.add(Activation('relu'))
+            
+        if descriptions[layerNum].find("dropout") > -1:
+            model.add(Dropout(0.5))
+        
+    return model
+        
 
 def main():
     np.random.seed(1000)
@@ -160,41 +176,29 @@ def main():
     print "Data Read complete"
    
     """define the Neural Net"""
-    model = Sequential()
-    model.add(Dense(size, 512))
-    model.add(Activation('relu'))
-    #model.add(Dropout(0.5))
+    numNeurons      = [size,200,100,1]    #number of units in each layer
+    descriptions    = ['input', 'relu', 'relu dropout','output'] #'type' of each layer, as parsed in makeModel() 
     
-    model.add(Dense(512, 512))
-    model.add(Activation('relu'))
-    model.add(Dropout(0.5))  
-    
-    model.add(Dense(512, 512))
-    model.add(Activation('relu'))
-    model.add(Dropout(0.5))  
-
-    model.add(Dense(512, 100))
-    model.add(Activation('relu'))
-    model.add(Dropout(0.5))    
-    
-    model.add(Dense(100, 1))
-    #model.add(Activation('tanh'))
-    
+    model           = makeModel(numNeurons,descriptions)
     model.compile(loss='mean_squared_error', optimizer='rmsprop')
     
     
-    """Get batches of data and train on them"""
+  
+    
+    """One pass through to ensure that every datapoint has been seen once"""    
     for i in range(0,int(np.ceil(len(trainRatings)*1./batchSize))):
         batchX,batchy   = getTestBatch(trainRatings,vectors,userInfo,movieAvg,batchSize,i)
         loss            = model.train(batchX,batchy)
         if (i%10000) == 0:
             print str(i)+"/"+str(numberEpochs)
+            
+    """Get batches of data and train on them"""
+    for i in range(0,numberEpochs):
+        batchX,batchy   = getTrainBatch(trainRatings,vectors,userInfo,movieAvg,batchSize)
+        loss            = model.train(batchX, batchy)
+        if (i%1000) == 0:
+            print str(i)+"/"+str(numberEpochs)  
 
-#    for i in range(0,numberEpochs):
-#        batchX,batchy   = getTrainBatch(trainRatings,vectors,userInfo,movieAvg,batchSize)
-#        loss            = model.train(batchX, batchy)
-#        if (i%1000) == 0:
-#            print str(i)+"/"+str(numberEpochs)
     
     del trainRatings #we've finished training, now we load the test set
     

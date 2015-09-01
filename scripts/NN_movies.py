@@ -15,6 +15,7 @@ VECTOR_LENGTH = 25
 
 """Returns the word2vec vectors as a dictionary of "term": np.array()"""
 def loadThemVectors():
+    global VECTOR_LENGTH
     outMat  = {}
     with open("../data/vectors.txt",'rb') as f:
         for line in f.readlines():
@@ -23,6 +24,7 @@ def loadThemVectors():
             arr     = np.array(sp[1].split(","))
             arr     = [float(x) for x in arr]
             outMat[name]    = arr           
+    VECTOR_LENGTH = len(arr)
     return outMat
 
 """returns a list of the lines in the Test ratings file"""    
@@ -71,6 +73,7 @@ def ratingsToData(ratings,vectors,userInfo,movieAvg,subset,AVG_RATING_VAL=3.19,A
             userword    = "user_"+user.strip()+".txt"
             likeword    = "like_"+mv
             dislword    = "dislike_"+mv
+            noMovie     = False
 
             if vectors.has_key(userword):
                 uservec     = vectors[userword]
@@ -100,11 +103,12 @@ def ratingsToData(ratings,vectors,userInfo,movieAvg,subset,AVG_RATING_VAL=3.19,A
                 movieStd    = float(movieAvg[mv][1])
             else:
                 print "NO MOVIE!!!"
+                noMovie     = True
                 movieMean   = avgRating
                 movieStd    = AVG_STD_VAL
                 
             example     = np.append(movieMean,movieStd)
-            #example     = np.append(example,numRated)
+            example     = np.append(example,numRated)
             example     = np.append(example,avgRating)
             example     = np.append(example,uservec)
             example     = np.append(example,likevec)
@@ -122,19 +126,19 @@ def getTrainSeq(ratings,vectors,userInfo,movieAvg,batchSize,block):
     ind     = block*batchSize
     subset  = (ind, ind+batchSize)
     Xbatch, ybatch  = ratingsToData(ratings,vectors,userInfo,movieAvg,subset)
-    return np.array(Xbatch), np.array(ybatch)
+    return Xbatch, ybatch
     
 def getTrainBatch(ratings,vectors,userInfo,movieAvg,batchSize):
     ind     = int(np.floor(np.random.rand()*(len(ratings) - batchSize)))
     subset  = (ind, ind+batchSize)
     Xbatch, ybatch  = ratingsToData(ratings,vectors,userInfo,movieAvg,subset)
-    return np.array(Xbatch), np.array(ybatch)
+    return Xbatch, ybatch
 
 def getTestBatch(ratings,vectors,userInfo,movieAvg,batchSize,block):
     ind     = block*batchSize
     subset  = (ind, ind+batchSize)
     Xbatch, ybatch  = ratingsToData(ratings,vectors,userInfo,movieAvg,subset)
-    return np.array(Xbatch), np.array(ybatch)
+    return Xbatch, ybatch
     
 def makeModel(numNeurons,descriptions):
     model   = Sequential()
@@ -181,23 +185,25 @@ def main():
     
     model           = makeModel(numNeurons,descriptions)
     model.compile(loss='mean_squared_error', optimizer='rmsprop')
-    
-    
-  
-    
-    """One pass through to ensure that every datapoint has been seen once"""    
-    for i in range(0,int(np.ceil(len(trainRatings)*1./batchSize))):
-        batchX,batchy   = getTestBatch(trainRatings,vectors,userInfo,movieAvg,batchSize,i)
-        loss            = model.train(batchX,batchy)
-        if (i%10000) == 0:
-            print str(i)+"/"+str(numberEpochs)
-            
+
+
+
     """Get batches of data and train on them"""
     for i in range(0,numberEpochs):
         batchX,batchy   = getTrainBatch(trainRatings,vectors,userInfo,movieAvg,batchSize)
         loss            = model.train(batchX, batchy)
-        if (i%1000) == 0:
-            print str(i)+"/"+str(numberEpochs)  
+        if (i%10000) == 0:
+            print str(i)+"/"+str(numberEpochs)     
+      
+    
+    """One pass through to ensure that every datapoint has been seen once"""    
+    for i in range(0,int(np.ceil(len(trainRatings)*1./batchSize))):
+        batchX,batchy   = getTrainSeq(trainRatings,vectors,userInfo,movieAvg,batchSize,i)
+        loss            = model.train(batchX,batchy)
+        if (i%10000) == 0:
+            print str(i)+"/"+str(len(trainRatings)/batchSize)
+            
+ 
 
     
     del trainRatings #we've finished training, now we load the test set
@@ -206,7 +212,7 @@ def main():
     testRatings = getTestSet("../data/raw/test/TestMe.txt")
     meanError   = 0
     sqError     = 0
-    batchSize   = 10000    
+    batchSize   = 100000    
     """test the model in batches"""
 
     for i in range(0,int(np.ceil(len(testRatings)*1./batchSize))):    

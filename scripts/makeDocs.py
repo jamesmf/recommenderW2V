@@ -22,7 +22,7 @@ import cPickle
 def main():
     STD_SCALAR  = 10
     "begin"
-    userStuff()     
+    userStuff()  
     print "done with userStuff"                            
     ratings     = getRatings() 
     print "done with averages"                         
@@ -41,9 +41,9 @@ def writeDoc(fields,ratings,STD_SCALAR):
 
     #This returns the word to write and how many times to write it in a tuple
     if z > 0:
-        out = ("like_"+movie+" ",int(np.floor(writeNum)))
+        out = ("L_"+movie+" ",int(np.floor(writeNum)))
     elif z < 0:
-        out = ("dislike_"+movie+" ",int(np.floor(-writeNum)))
+        out = ("D_"+movie+" ",int(np.floor(-writeNum)))
     else:
         out = ("",0)
     return out
@@ -117,10 +117,22 @@ def userStuff():
                     userStats[tsp[0]].append(float(tsp[2]))
                 else:
                     userStats[tsp[0]]  = [float(tsp[2])]
-        out ={}            
+        out = {}            
+        ratTots     = []
         for k,v in userStats.iteritems():
-            out[k]  = str(np.mean(v))+"\t"+str(len(v))
+            ratTots.append(len(v))
+
+        numMean     = np.mean(np.array(ratTots))
+        numSTD      = np.std(np.array(ratTots))
+
+        for k,v in userStats.iteritems():
+            norm    = (len(v) - numMean)/numSTD
+            out[k]  = str(np.mean(v))+"\t"+str(norm)
             
+         
+
+                 
+         
         with open("../data/out/users.pickle",'wb') as f:
             cp = cPickle.Pickler(f)
             cp.dump(out)

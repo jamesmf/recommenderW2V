@@ -12,17 +12,23 @@ import numpy as np
 from os import listdir
 
 
-def getRandom(user,words,numLines,numWords,outfile):
-    numLines    = min(max(numLines,len(words)/10),400)
+WINDOWSIZE  = 20
+NUMLINES    = 20
+
+
+def getRandom(user,words,outfile):
+    global WINDOWSIZE, NUMLINES
+    numLines    = min(max(NUMLINES,len(words)/10),400)
     for x in range(numLines):
         shuffle(words)
-        new     = ' '.join(words[:numWords/2])+' '+user+' '+' '.join(words[numWords/2:numWords])
+        words2  = words
+        [words2.insert(pos,user) for pos in range(len(words)/WINDOWSIZE + 1)]
+        new     = ' '.join(words2)
         with open(outfile,'a') as of:
             of.write(new+'\n')
 
 def main():
-    NUMWORDS    = 20
-    NUMLINES    = 20
+
     OUTFILE     = "../data/W2V_movies.txt"
     folder      = "../data/processed/"
     x           = [folder+a for a in listdir(folder)]
@@ -34,7 +40,7 @@ def main():
         with open(fileName,'rb') as f:
             user    = fileName[fileName.rfind("/")+1:]
             words   = f.read().split(" ")     
-            getRandom(user,words,NUMLINES,NUMWORDS,OUTFILE)
+            getRandom(user,words,OUTFILE)
             count+=1
             if (count%1000) == 0:
                 print count,"/",len(x)

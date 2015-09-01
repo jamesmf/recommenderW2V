@@ -10,6 +10,7 @@ Created on Fri Jul 31 11:41:53 2015
 import codecs
 from gensim.models import Word2Vec
 import json
+import sys
  
 def export_to_file(path_to_model, output_file):
 	output = codecs.open(output_file, 'w' , 'utf-8')
@@ -30,7 +31,7 @@ def export_to_file(path_to_model, output_file):
  
  
 def main():
-     export_to_file("../data/out/vectors.bin","../data/vectors.txt")
+     export_to_file(sys.argv[1],sys.argv[2])
      
 if __name__ == "__main__":
     main()
